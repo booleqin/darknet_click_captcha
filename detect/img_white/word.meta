@@ -1,0 +1,6 @@
+classes=1
+train=/xxx/detect/img_white/train.list
+valid=/xxx/detect/img_white/test.list
+names=/xxx/detect/img_white/word.labels
+backup=/xxx/detect/img_white/backup
+top=5

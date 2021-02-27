@@ -1,0 +1,123 @@
+#! /bin/bash
+# created by boole @ 2021-02-27
+
+dt=`date +%Y%m%d`
+
+TRACE_VERSION="1.0.0.0"
+PID_FILE=./conf/flask.pid
+LOG_FILE=./log/flask.log.${dt}
+
+function check(){
+    # check if process exists
+    echo "check ..."
+    pid=`cat $PID_FILE 2>/dev/null`
+    run_count=`ps -p $pid 2>/dev/null | wc -l`
+    if [ "$run_count" -ge "2" ]
+    then
+        echo "Process $pid is running."
+    else
+        echo "Process $pid is NOT running !!"
+        return 1
+    fi
+    return 0
+}
+
+function start() {
+    echo "start..."
+    nohup ./pyenv/bin/python detection_api.py >> $LOG_FILE 2>&1 & echo $! > $PID_FILE
+    t=0
+    while [ $t -lt 15 ]
+    do
+        if check
+        then 
+            break
+        fi
+        sleep 1s
+        t=$(($t + 1))
+    done
+    echo "done"
+}
+function stop(){
+    echo "stop ..."
+    pid=`cat $PID_FILE 2>/dev/null`
+    # kill -TERM $pid 
+    ps -ef | grep detection_api.py | grep -v grep | awk '{print $2}' | xargs kill
+    sleep 1s
+    echo "done"
+}
+function restart(){
+    if check 
+    then
+        stop
+    fi
+    start
+}
+function reload(){
+    pid=`cat $PID_FILE 2>/dev/null`
+    echo start new master
+    kill -USR2 $pid
+    t=0
+    while [ $t -lt 5 ]
+    do
+        if [ -e $PID_FILE.2 ]
+        then 
+            break
+        fi
+        sleep 1s
+        t=$(($t + 1))
+        echo "wait for $t times ..."
+    done
+    echo stop old workers
+    kill -WINCH $pid
+    sleep 3s
+    echo stop old master
+    kill -TERM $pid
+    sleep 1s
+}
+check_is_started(){
+    if check
+    then
+        exit 0
+    else
+        exit 1
+    fi
+}
+check_is_stoped(){
+    if check
+    then
+        exit 1
+    else
+        exit 0
+    fi
+}
+if [ "$1" = "start" ]
+    then
+    if check
+        then
+        echo "Process already running, EXIT"
+    else
+        start
+    fi
+    check_is_started
+elif [ "$1" = "stop" ]
+    then
+    stop
+    check_is_stoped
+elif [ "$1" = "restart" ]
+    then
+    restart
+    check_is_started
+elif [ "$1" = "reload" ]
+    then
+    reload
+    check_is_started
+elif [ "$1" = "status" ]
+    then
+    check_is_started
+elif [ "$1" = "version" ] 
+    then
+    echo "Version: $TRACE_VERSION"
+else
+    echo "Usage:"
+    echo "    $0 [start|stop|restart|reload|status|version]"
+fi

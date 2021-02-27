@@ -1,0 +1,6 @@
+classes=4313
+train=/xxx/classifier/train.list
+valid=/xxx/classifier/test.list
+labels=/xxx/classifier/class.labels
+backup=/xxx/classifier/backup
+top=5
